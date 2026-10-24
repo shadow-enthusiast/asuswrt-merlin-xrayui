@@ -1,0 +1,2 @@
+#!/bin/sh
+echo "mount $*" >>/tmp/mount.log

@@ -1,0 +1,5 @@
+#!/bin/sh
+export NVRAM_rc_support="${NVRAM_rc_support-am_addons mssid 2.4G 5G}"
+export NVRAM_productid="${NVRAM_productid-RT-AX58U_V2}"
+export NVRAM_lan_ipaddr="${NVRAM_lan_ipaddr-192.168.50.1}"
+exec /fwbin/nvram "$@"
