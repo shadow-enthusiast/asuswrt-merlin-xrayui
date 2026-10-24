@@ -223,3 +223,70 @@ restart() {
 
     return "$start_rc"
 }
+
+# Called by the xrayui_autorestart cron job. Restarts Xray when it died on its own.
+# The PID file is the desired-state flag: start() writes it, stop() removes it, a crash leaves it behind.
+# State file: "<attempts> <epoch of the last attempt> <1 once the attempts ran out>".
+autorestart_check() {
+    load_xrayui_config
+
+    if [ "${xray_autorestart:-false}" != "true" ]; then
+        rm -f "$XRAY_AUTORESTART_STATE_FILE"
+        return 0
+    fi
+
+    local attempts=0 last=0 gaveup=0
+    if [ -f "$XRAY_AUTORESTART_STATE_FILE" ]; then
+        read -r attempts last gaveup <"$XRAY_AUTORESTART_STATE_FILE"
+        case "$attempts" in '' | *[!0-9]*) attempts=0 ;; esac
+        case "$last" in '' | *[!0-9]*) last=0 ;; esac
+    fi
+
+    if [ -n "$(get_xray_daemon_pid)" ]; then
+        if [ "$attempts" -gt 0 ]; then
+            log_notice "Xray is running again after $attempts automatic restart attempt(s)."
+        fi
+        rm -f "$XRAY_AUTORESTART_STATE_FILE"
+        return 0
+    fi
+
+    # Xray is down on purpose while a restart is in progress.
+    if [ -f "$XRAY_RESTART_LOCKFILE" ] && which flock >/dev/null 2>&1 && ! flock -n "$XRAY_RESTART_LOCKFILE" true; then
+        log_debug "A restart is in progress. Skipping the Xray auto-restart check."
+        return 0
+    fi
+
+    # Give a stop() that is in progress time to remove the PID file.
+    [ -f "$XRAY_PIDFILE" ] && sleep 5
+    if [ ! -f "$XRAY_PIDFILE" ]; then
+        rm -f "$XRAY_AUTORESTART_STATE_FILE"
+        return 0
+    fi
+    [ -z "$(get_xray_daemon_pid)" ] || return 0
+
+    local retries=$(sanitize_autorestart_number "$xray_autorestart_retries" 3 100)
+    local delay=$(sanitize_autorestart_number "$xray_autorestart_delay" 10 1440)
+
+    if [ "$retries" -gt 0 ] && [ "$attempts" -ge "$retries" ]; then
+        if [ "$gaveup" != "1" ]; then
+            log_error "Xray is still not running after $attempts automatic restart attempt(s). Giving up until Xray is started again."
+            echo "$attempts $last 1" >"$XRAY_AUTORESTART_STATE_FILE"
+        fi
+        return 0
+    fi
+
+    local now=$(date +%s)
+    # 30 s of slack, so a delay equal to the check interval is not missed by a few seconds of cron jitter.
+    if [ "$attempts" -gt 0 ] && [ $((now - last)) -lt $((delay * 60 - 30)) ]; then
+        log_debug "Xray is not running. The next automatic restart attempt is due $delay minute(s) after the last one."
+        return 0
+    fi
+
+    attempts=$((attempts + 1))
+    echo "$attempts $now 0" >"$XRAY_AUTORESTART_STATE_FILE"
+
+    local of=""
+    [ "$retries" -gt 0 ] && of="/$retries"
+    log_warn "Xray was not running, restarting (attempt $attempts$of)"
+    restart
+}

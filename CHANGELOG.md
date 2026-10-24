@@ -1,5 +1,9 @@
 # XRAYUI Changelog
 
+## [Unreleased]
+
+- ADDED: **Auto-restart Xray if it stops** in **General Options** → **General**. XRAYUI checks every few minutes whether Xray is still running and restarts it when it exited on its own, for example after a crash, with a set number of attempts (or forever) and a delay between them. Xray stopped with **Stop** or `xrayui stop` stays stopped, and every automatic restart is written to the system log. ([#424](https://github.com/DanielLavrushin/asuswrt-merlin-xrayui/issues/424))
+
 ## [0.70.2] - 2026-09-28
 
 - ADDED: The **Outbounds** list marks in purple the outbound a balancer sends new connections to, and the balancer list and routing rules show it too. For **random** and **roundRobin** balancers, which spread connections, every outbound taking part is marked. Requires **Check connection to xray server**.
