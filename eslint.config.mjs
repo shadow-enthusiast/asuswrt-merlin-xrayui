@@ -48,7 +48,7 @@ const EXISTING_DEBT = {
 // there, not here.
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'node_modules/**', 'tools/**', 'tests/test-results/**', 'docs/**', 'coverage/**']
+    ignores: ['dist/**', 'node_modules/**', 'tests/e2e/**', 'tools/**', 'tests/test-results/**', 'docs/**', 'coverage/**']
   },
 
   js.configs.recommended,
