@@ -1,0 +1,3 @@
+#!/bin/sh
+export FW_STATE="${FW_STATE:-/tmp/fw}"
+exec /fwbin/ipset "$@"
