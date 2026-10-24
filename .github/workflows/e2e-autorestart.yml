@@ -1,0 +1,92 @@
+name: E2E auto-restart (router emulator + Playwright)
+
+on:
+  push:
+    branches: ['e2e/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          cache-dependency-path: ./pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build XRAYUI
+        run: |
+          pnpm run build
+          sed -i 's/^XRAYUI_VERSION=.*/XRAYUI_VERSION="0.70.2.1"/' dist/xrayui
+
+      # The fork release is 0.70.2.1; the updater must still offer upstream 0.70.3+ and must not offer 0.70.2.
+      - name: Version compare used by the updater (Version.vue)
+        run: |
+          node --input-type=module -e "
+            import vCompare from 'version-compare';
+            import vClean from 'version-clean';
+            const cur = '0.70.2.1';
+            const cases = [['v0.70.3', 1], ['v0.71.0', 1], ['v0.70.2', 0], ['v0.70.1', -1]];
+            for (const [tag, want] of cases) {
+              const got = vCompare(vClean(tag), cur);
+              console.log(tag, 'vs', cur, '=>', got, got === 1 ? '(update offered)' : '(no update)');
+              if (got !== want) { console.error('unexpected result for', tag); process.exit(1); }
+            }
+            if (vClean('v0.70.2.1') !== '0.70.2.1') process.exit(1);
+          "
+
+      - name: Build the router emulator
+        run: docker build -t xrayui-router tests/e2e/router
+
+      - name: Boot the router
+        run: |
+          docker run -d --init --name router -v "$PWD/dist:/dist:ro" -v "$PWD/tests/backend/firewall/bin:/fwbin:ro" xrayui-router
+          for i in $(seq 1 90); do
+            docker exec router test -f /tmp/router.ready && break
+            sleep 2
+          done
+          docker exec router sh -c 'cat /tmp/startup.log; echo; cru l; echo; pidof xray; ls -la /www/user /www/user/xrayui'
+          test -n "$(docker exec router pidof xray)"
+
+      - name: Install Playwright
+        working-directory: tests/e2e
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Run Playwright
+        working-directory: tests/e2e
+        run: npx playwright test
+
+      - name: Collect router logs
+        if: always()
+        run: |
+          mkdir -p router-logs
+          for f in syslog.log crond.log startup.log service_event.log service.log; do
+            docker exec router cat /tmp/$f >router-logs/$f 2>/dev/null || true
+          done
+          docker exec router sh -c 'cru l; echo; cat /opt/etc/xrayui.conf' >router-logs/state.txt 2>&1 || true
+          grep -E 'XRAYUI: (Xray was not running|Xray is running again|Xray is still not running)' router-logs/syslog.log || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-autorestart
+          path: |
+            router-logs/
+            tests/e2e/playwright-report/
+            tests/e2e/test-results/
