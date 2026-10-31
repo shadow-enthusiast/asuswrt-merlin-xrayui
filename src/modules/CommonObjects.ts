@@ -797,6 +797,7 @@ export class XraySockoptObject {
   public domainStrategy?: string = 'AsIs';
   public dialerProxy?: string;
   public acceptProxyProtocol?: boolean;
+  public tcpKeepAliveIdle?: number;
   public tcpKeepAliveInterval?: number;
   public tcpcongestion?: string;
   public interface?: string;
@@ -811,6 +812,8 @@ export class XraySockoptObject {
     this.tcpNoDelay = !this.tcpNoDelay ? undefined : this.tcpNoDelay;
     this.domainStrategy = this.domainStrategy == 'AsIs' ? undefined : this.domainStrategy;
     this.dialerProxy = this.dialerProxy == '' ? undefined : this.dialerProxy;
+    this.tcpKeepAliveIdle = !this.tcpKeepAliveIdle ? undefined : this.tcpKeepAliveIdle;
+    this.tcpKeepAliveInterval = !this.tcpKeepAliveInterval ? undefined : this.tcpKeepAliveInterval;
     return isObjectEmpty(this) ? undefined : this;
   };
 }

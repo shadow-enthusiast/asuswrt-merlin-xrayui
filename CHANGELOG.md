@@ -1,5 +1,9 @@
 # XRAYUI Changelog
 
+## [Unreleased]
+
+- ADDED: **TCP keepalive idle** and **TCP keepalive interval** in an inbound's or outbound's **Transport** → **Sockopt** settings. Xray leaves keepalive off on inbound connections, so a client that vanished without closing its connection, for example a phone that lost signal, kept it open for hours and the router slowly ran out of memory. With, for example, 300 and 30 such connections are closed in under 10 minutes. A `tcpKeepAliveIdle` already set in `config.json` is now shown in the UI too. ([#427](https://github.com/DanielLavrushin/asuswrt-merlin-xrayui/issues/427))
+
 ## [0.70.2] - 2026-09-28
 
 - ADDED: The **Outbounds** list marks in purple the outbound a balancer sends new connections to, and the balancer list and routing rules show it too. For **random** and **roundRobin** balancers, which spread connections, every outbound taking part is marked. Requires **Check connection to xray server**.
