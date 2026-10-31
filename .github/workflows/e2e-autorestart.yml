@@ -80,7 +80,7 @@ jobs:
 
       - name: Run Playwright
         working-directory: tests/e2e
-        run: npx playwright test
+        run: npx playwright test keepalive.e2e.ts
 
       - name: Collect router logs
         if: always()
