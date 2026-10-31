@@ -1,4 +1,4 @@
-name: E2E auto-restart (router emulator + Playwright)
+name: E2E auto-restart + keepalive (router emulator + Playwright)
 
 on:
   push:
@@ -49,12 +49,22 @@ jobs:
             if (vClean('v0.70.2.1') !== '0.70.2.1') process.exit(1);
           "
 
+      # The same package build-n-release.yml publishes, for installing this build on a test router.
+      - name: Pack the package
+        run: tar --transform 's|^|xrayui/|' -czf asuswrt-merlin-xrayui.tar.gz -C dist .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xrayui-package
+          path: asuswrt-merlin-xrayui.tar.gz
+
       - name: Build the router emulator
         run: docker build -t xrayui-router tests/e2e/router
 
       - name: Boot the router
         run: |
-          docker run -d --init --name router -v "$PWD/dist:/dist:ro" -v "$PWD/tests/backend/firewall/bin:/fwbin:ro" xrayui-router
+          docker network create e2enet
+          docker run -d --init --name router --network e2enet -v "$PWD/dist:/dist:ro" -v "$PWD/tests/backend/firewall/bin:/fwbin:ro" xrayui-router
           for i in $(seq 1 90); do
             docker exec router test -f /tmp/router.ready && break
             sleep 2
