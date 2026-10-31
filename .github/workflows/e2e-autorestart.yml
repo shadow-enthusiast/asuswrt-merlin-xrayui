@@ -1,4 +1,4 @@
-name: E2E auto-restart (router emulator + Playwright)
+name: E2E auto-restart + keepalive (router emulator + Playwright)
 
 on:
   push:
@@ -54,7 +54,8 @@ jobs:
 
       - name: Boot the router
         run: |
-          docker run -d --init --name router -v "$PWD/dist:/dist:ro" -v "$PWD/tests/backend/firewall/bin:/fwbin:ro" xrayui-router
+          docker network create e2enet
+          docker run -d --init --name router --network e2enet -v "$PWD/dist:/dist:ro" -v "$PWD/tests/backend/firewall/bin:/fwbin:ro" xrayui-router
           for i in $(seq 1 90); do
             docker exec router test -f /tmp/router.ready && break
             sleep 2
