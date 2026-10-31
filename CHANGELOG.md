@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 - ADDED: **Auto-restart Xray if it stops** in **General Options** → **General**. XRAYUI checks every few minutes whether Xray is still running and restarts it when it exited on its own, for example after a crash, with a set number of attempts (or forever) and a delay between them. Xray stopped with **Stop** or `xrayui stop` stays stopped, and every automatic restart is written to the system log. ([#424](https://github.com/DanielLavrushin/asuswrt-merlin-xrayui/issues/424))
+- ADDED: **TCP keepalive idle** and **TCP keepalive interval** in an inbound's or outbound's **Transport** → **Sockopt** settings. Xray leaves keepalive off on inbound connections, so a client that vanished without closing its connection, for example a phone that lost signal, kept it open for hours and the router slowly ran out of memory. With, for example, 300 and 30 such connections are closed in under 10 minutes. A `tcpKeepAliveIdle` already set in `config.json` is now shown in the UI too.
 
 ## [0.70.2] - 2026-09-28
 
