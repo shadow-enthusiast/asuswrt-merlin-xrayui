@@ -13,7 +13,10 @@ printf 'xray_startup y\nxray_version %s\n' "$(sed -n 's/^XRAYUI_VERSION="\(.*\)"
 cat >/opt/etc/xray/config.json <<'JSON'
 {
   "log": { "loglevel": "warning" },
-  "inbounds": [{ "tag": "socks-in", "listen": "127.0.0.1", "port": 10808, "protocol": "socks", "settings": { "udp": true } }],
+  "inbounds": [
+    { "tag": "socks-in", "listen": "127.0.0.1", "port": 10808, "protocol": "socks", "settings": { "udp": true } },
+    { "tag": "socks-lan", "listen": "0.0.0.0", "port": 10809, "protocol": "socks", "settings": { "udp": false } }
+  ],
   "outbounds": [{ "tag": "direct", "protocol": "freedom" }],
   "routing": { "rules": [] }
 }
