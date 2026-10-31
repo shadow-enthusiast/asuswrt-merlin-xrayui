@@ -1,3 +1,4 @@
+import { plainToInstance } from 'class-transformer';
 import {
   XrayAllocateObject,
   XrayDnsObject,
@@ -482,6 +483,28 @@ describe('CommonObjects', () => {
       expect(so.domainStrategy).toBe('UseIPv6');
       expect(so.mark).toBe(100);
       expect(so.tcpMptcp).toBe(true);
+    });
+
+    it('keeps TCP keepalive values, including -1 that turns the outbound default off', () => {
+      const so = new XraySockoptObject();
+      so.tcpKeepAliveIdle = 300;
+      so.tcpKeepAliveInterval = -1;
+      so.normalize();
+      expect(JSON.parse(JSON.stringify(so))).toEqual({ tcpKeepAliveIdle: 300, tcpKeepAliveInterval: -1 });
+    });
+
+    it('drops empty and zero TCP keepalive values', () => {
+      const so = new XraySockoptObject();
+      so.tcpKeepAliveIdle = 0;
+      (so as unknown as Record<string, unknown>).tcpKeepAliveInterval = '';
+      expect(so.normalize()).toBeUndefined();
+    });
+
+    it('keeps TCP keepalive set in config.json through loading and saving', () => {
+      const s = plainToInstance(XrayStreamSettingsObject, { network: 'tcp', sockopt: { tcpKeepAliveIdle: 300, tcpKeepAliveInterval: 30 } });
+      s.sockopt = plainToInstance(XraySockoptObject, s.sockopt);
+      const saved = JSON.parse(JSON.stringify(s.normalize()));
+      expect(saved.sockopt).toEqual({ tcpKeepAliveIdle: 300, tcpKeepAliveInterval: 30 });
     });
   });
 
